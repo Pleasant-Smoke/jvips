@@ -1,0 +1,30 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+    }
+
+    resolutionStrategy {
+        eachPlugin {
+            if(requested.id.id.startsWith('com.pss')){
+                useModule("com.pss:jvips-plugin:1.0-SNAPSHOT")
+            }
+        }
+    }
+
+    includeBuild 'jvips-plugin'
+}
+
+rootProject.name = 'jvips'
+include 'common'
+include 'panama'
+include 'jni'
+include 'testing'
+
+includeBuild('jvips-plugin')
+
+project(':common').projectDir = file('jvips/common')
+project(':panama').projectDir = file('jvips/panama')
+project(':jni').projectDir = file('jvips/jni')
+project(':testing').projectDir = file('jvips/testing')
+
+

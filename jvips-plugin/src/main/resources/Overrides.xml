@@ -1,0 +1,81 @@
+<vips-overrides>
+    <documentation>
+
+    </documentation>
+    <manual-renames>
+        <manual-rename from="autorotRemoveAngle" to="autoRotateRemoveAngle" />
+        <manual-rename from="colourspaceIssupported" to="isColourSpaceSupported" />
+        <manual-rename from="getN_pages" to="getNumberOfPages" />
+        <manual-rename from="getN_subifds" to="getNumberOfSubfieldIds" />
+        <manual-rename from="getXoffset" to="getXOffset" />
+        <manual-rename from="getYoffset" to="getYOffset" />
+        <manual-rename from="getXres" to="getXResolution" />
+        <manual-rename from="getYres" to="getYResolution" />
+        <manual-rename from="hasalpha" to="hasAlpha" />
+        <manual-rename from="isfile" to="isFile" />
+        <manual-rename from="iskilled" to="isKilled" />
+        <manual-rename from="ispartial" to="isPartial" />
+        <manual-rename from="objectArgumentIsset" to="objectArgumentIsSet" />
+        <manual-rename from="objectArgumentNeedsstring" to="objectArgumentNeedsString" />
+        <manual-rename from="regionEqualsregion" to="regionEqualsRegion" />
+    </manual-renames>
+    <remap-files>
+        <remap-file contains="dzsave" file="libvips/foreign/dzsave.c" />
+        <remap-file contains="heifsave" file="libvips/foreign/heifsave.c" />
+        <remap-file contains="heifload" file="libvips/foreign/heifload.c" />
+        <remap-file contains="jxlsave" file="libvips/foreign/jxlsave.c" />
+        <remap-file contains="magicksave" file="libvips/foreign/vips2magick.c" />
+        <remap-file contains="magickload" file="libvips/foreign/magick7load.c" />
+        <remap-file contains="jp2kload" file="libvips/foreign/jp2kload.c" />
+        <remap-file contains="jpegload" file="libvips/foreign/jpegload.c" />
+        <remap-file contains="magickload" file="libvips/foreign/magickload.c" />
+        <remap-file contains="pngload" file="libvips/foreign/pngload.c" />
+        <remap-file contains="pdfload" file="libvips/foreign/pdfiumload.c" />
+        <remap-file contains="openslideload" file="libvips/foreign/openslideload.c" />
+        <remap-file contains="composite" file="libvips/conversion/composite.cpp" />
+        <remap-file contains="reduceh" file="libvips/resample/reduceh.cpp" />
+        <remap-file contains="reducev" file="libvips/resample/reducev.cpp" />
+    </remap-files>
+    <remap-optional-args>
+        <remap-optional-arg to="VipsBandable">
+            <identifier>vips_hist_equal</identifier>
+            <identifier>vips_hist_find</identifier>
+            <identifier>vips_maplut</identifier>
+            <identifier>vips_msb</identifier>
+        </remap-optional-arg>
+        <remap-optional-arg to="VipsMinMax">
+            <identifier>vips_min</identifier>
+            <identifier>vips_max</identifier>
+        </remap-optional-arg>
+        <remap-optional-arg to="VipsShrink">
+            <identifier>vips_shrink</identifier>
+            <identifier>vips_shrinkh</identifier>
+            <identifier>vips_shrinkv</identifier>
+        </remap-optional-arg>
+        <remap-optional-arg to="VipsReduce">
+            <identifier>vips_reduce</identifier>
+            <identifier>vips_reduceh</identifier>
+            <identifier>vips_reducev</identifier>
+        </remap-optional-arg>
+        <remap-optional-arg to="VipsRGB2">
+            <identifier>vips_scRGB2BW</identifier>
+            <identifier>vips_scRGB2sRGB</identifier>
+        </remap-optional-arg>
+        <remap-optional-arg to="VipsConv">
+            <identifier>vips_conv</identifier>
+            <identifier>vips_convsep</identifier>
+        </remap-optional-arg>
+        <remap-optional-arg to="VipsEmbedOrGravity">
+            <identifier>vips_embed</identifier>
+            <identifier>vips_gravity</identifier>
+        </remap-optional-arg>
+        <remap-optional-arg to="VipsBandfold">
+            <identifier>vips_bandfold</identifier>
+            <identifier>vips_bandunfold</identifier>
+        </remap-optional-arg>
+        <remap-optional-arg to="VipsXYZLab">
+            <identifier>vips_Lab2XYZ</identifier>
+            <identifier>vips_XYZ2Lab</identifier>
+        </remap-optional-arg>
+    </remap-optional-args>
+</vips-overrides>

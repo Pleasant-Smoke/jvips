@@ -1,0 +1,80 @@
+plugins {
+    id 'java'
+ //   id "com.pss.jvips.jni"
+}
+
+group 'com.pss'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation project(':common')
+    //testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
+    //testImplementation group: 'org.spockframework', name: 'spock-core', version: '2.3-groovy-4.0'
+//    annotationProcessor group: 'com.google.auto.service', name: 'auto-service', version: '1.0.1'
+//    implementation group: 'com.google.auto.service', name: 'auto-service-annotations', version: '1.0.1'
+
+
+    //testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+}
+
+test {
+    useJUnitPlatform()
+    jvmArgs += ['--add-exports', 'java.base/sun.nio.ch=ALL-UNNAMED' ,'--add-opens', 'java.base/sun.nio.ch=ALL-UNNAMED']
+}
+
+
+
+tasks.withType(JavaCompile){
+
+    options.compilerArgs += ['--add-exports', 'java.base/sun.nio.ch=ALL-UNNAMED','--add-exports', 'jdk.unsupported/sun.misc=ALL-UNNAMED', '-h', "$projectDir/src/main/cpp"]
+}
+
+
+
+
+sourceSets {
+    main {
+        java {
+            srcDirs += "${buildDir}/generated/src/main/java"
+        }
+        resources {
+            srcDirs += 'src/main/cpp/build'
+        }
+    }
+}
+
+processResources {
+    exclude "*/build/CMakeFiles/**"
+    exclude "*/build/*.cmake"
+    exclude "*/build/*.txt"
+    exclude "*/build/Makefile"
+
+}
+
+/**
+ * Error message constants, JNI can export them but they are ugly AF
+ */
+
+//messages {
+//    NULL_POINTER_PASSED_FOR_BYTE_BUFFER {
+//        message = 'ByteBuffer address was null'
+//        value = -10
+//    }
+//    SIZE_PASSED_WAS_0_OR_NEGATIVE {
+//        message = 'Size passed was 0 or negative'
+//        value = -9;
+//    }
+//    MESSAGE_FAILED_TO_PARSE {
+//        message = 'Passed in message failed to parse'
+//        value = -8
+//    }
+//    BUFFER_TOO_SMALL_FOR_DEFAULT_MESSAGE {
+//        message = 'Buffer to small for default message size'
+//        value = -7
+//    }
+//}
+

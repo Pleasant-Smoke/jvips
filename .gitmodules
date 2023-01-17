@@ -1,0 +1,3 @@
+[submodule "jvips-plugin/lib/purejin"]
+	path = jvips-plugin/lib/purejin
+	url = https://github.com/jbee/purejin.git

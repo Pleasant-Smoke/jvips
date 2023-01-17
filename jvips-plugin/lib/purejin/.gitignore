@@ -1,0 +1,9 @@
+
+
+target/
+src/doc/
+lib/
+pom.*
+*~
+
+_site/

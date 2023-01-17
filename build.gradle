@@ -1,0 +1,31 @@
+plugins {
+    id "com.github.spotbugs" version "5.0.13"
+}
+
+group 'com.pss'
+version '1.0-SNAPSHOT'
+
+
+subprojects {
+
+    apply plugin: 'java-library'
+    apply plugin: 'com.github.spotbugs'
+
+    repositories {
+        mavenCentral()
+        mavenLocal()
+    }
+
+    dependencies {
+        annotationProcessor group: 'com.google.auto.service', name: 'auto-service', version: '1.0.1'
+        implementation group: 'com.google.auto.service', name: 'auto-service-annotations', version: '1.0.1'
+
+        implementation group: 'org.slf4j', name: 'slf4j-simple', version: '2.0.3'
+        implementation group: 'org.slf4j', name: 'slf4j-api', version: '2.0.3'
+        implementation group: 'org.jetbrains', name: 'annotations', version: '23.0.0'
+        testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.1'
+        testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.1'
+        testImplementation group: 'org.assertj', name: 'assertj-core', version: '3.23.1'
+    }
+
+}

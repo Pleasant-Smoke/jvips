@@ -1,0 +1,33 @@
+import java.nio.file.Paths
+import java.nio.file.Files
+
+plugins {
+    id 'java'
+  //  id "com.pss.jvips.panama" version "1.0-SNAPSHOT"
+}
+
+
+group 'com.pss'
+version '1.0-SNAPSHOT'
+
+apply from: 'gradle/panama.gradle'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation project(':common')
+
+}
+
+test {
+    useJUnitPlatform()
+}
+sourceSets {
+    main {
+        java {
+            srcDirs += "${buildDir}/generated/src/main/java"
+        }
+    }
+}

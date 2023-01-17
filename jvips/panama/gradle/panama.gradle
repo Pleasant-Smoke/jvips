@@ -1,0 +1,144 @@
+/*
+ * jvips, a Java implementation that interfaces to libvips
+ *
+ * Copyright (C) 2023 Jonathan Strauss
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * https://www.gnu.org/licenses/old-licenses/lgpl-2.1-standalone.html
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ */
+import java.nio.file.Paths
+
+tasks.register('jextractOnPath', Exec){
+    group = 'panama'
+
+    commandLine "sh", "./panama-on-path.sh"
+
+    standardOutput = new ByteArrayOutputStream()
+
+
+    // Link: https://jdk.java.net/jextract/
+    ext.output = {
+        return standardOutput.toString()
+    }
+}
+
+tasks.register('generateIncludesFile', Exec){
+    group = 'panama'
+
+//    doLast {
+        if (!file("${projectDir}/panama.properties").isFile()) {
+            throw new GradleException('panama.properties does not exist please copy and paste and fill in the paths to jextract and libvips')
+        }
+
+        Properties properties = new Properties()
+        properties.load(file("${projectDir}/panama.properties").newInputStream())
+        String panama = getPath(properties.getProperty('panama.location'))
+        String vips = getPath(properties.getProperty('vips.location'))
+
+
+        commandLine "${panama}/bin/jextract", '--dump-includes', 'includes.txt', "${vips}/libvips/include/vips/vips.h",
+                '-I', "${vips}/libvips/include",
+                '-I', "${vips}/libvips/include/vips",
+                '-I', '/usr/lib',
+                '-I', '/usr/include/glib-2.0',
+                '-I', '/usr/include/glib-2.0/include',
+                '-I', '/usr/lib/glib-2.0/include'
+
+
+        doLast {
+            Map<String, List<String>> newIncludes = new LinkedHashMap<>()
+            List<String> includes = file("${projectDir}/includes.txt").readLines()
+            List<String> currentBlock
+            for (String line : includes) {
+                String truncated = truncatePath(vips, panama, line)
+                if (truncated.startsWith('####')) {
+                    currentBlock = new ArrayList<String>()
+                    newIncludes.put(truncated, currentBlock)
+                } else if (!truncated.empty) {
+                    currentBlock.add(truncated)
+                }
+            }
+            List<String> newLines = new ArrayList<>()
+            for (Map.Entry<String, List<String>> entry : newIncludes.entrySet()) {
+                String key = entry.getKey()
+                if (key.contains("/include/bits")) {
+                    continue
+                }
+                if (key.matches('.+/usr/include/(sys/)?[a-zA-Z0-9_-]*\\.h$') && (!key.endsWith('gtype.h') )) {
+                    continue
+                }
+                if (key.contains('glib-2.0') && !key.endsWith('glibconfig.h') &&
+                        // need g_object_ref and g_object_unref
+                        !key.endsWith('gobject.h') &&
+                        // need GCallback
+                        //!key.endsWith("gclosure.h") &&
+                        // need Gtype
+                        !key.endsWith('gtype.h') &&
+                        !key.endsWith('gmem.h') && // need g_free
+                        // need signal when vips object is destroyed
+                        !key.endsWith('gsignal.h')) {
+                    continue
+                }
+                if (key.contains('asm-generic')) {
+                    continue
+                }
+                if (key.contains('linux')) {
+                    continue
+                }
+                newLines.add(entry.getKey())
+                newLines.add("")
+                newLines.addAll(entry.getValue())
+                newLines.add("")
+
+            }
+            file("${projectDir}/includes.txt").write(newLines.join("\n"))
+        }
+//    }
+}
+
+
+//@todo: deduplicate this
+tasks.register('generateJavaFiles', Exec){
+    group = 'panama'
+//    doLast {
+        if (!file("${projectDir}/panama.properties").isFile()) {
+            throw new GradleException('panama.properties does not exist please copy and paste and fill in the paths to jextract and libvips')
+        }
+        Properties properties = new Properties()
+        properties.load(file("${projectDir}/panama.properties").newInputStream())
+        String panama = getPath(properties.getProperty('panama.location'))
+        String vips = getPath(properties.getProperty('vips.location'))
+
+        commandLine "${panama}/bin/jextract", '-t', 'org.libvips', '--source',
+                '--output', 'src/main/java',
+                '--header-class-name', 'LibVips',
+                '@includes.txt', "${vips}/libvips/include/vips/vips.h",
+                '-I', "${vips}/libvips/include",
+                '-I', "${vips}/libvips/include/vips",
+                '-I', '/usr/lib',
+                '-I', '/usr/include/glib-2.0',
+                '-I', '/usr/include/glib-2.0/include',
+                '-I', '/usr/lib/glib-2.0/include'
+//    }
+}
+
+static String truncatePath(String vipsPath, String jvmPath, String line){
+    return line.replace(vipsPath, "").replace(jvmPath, "")
+}
+
+static String getPath(String path) {
+    return Paths.get(path.replace('~', System.getProperty('user.home'))).toAbsolutePath().toString()
+}

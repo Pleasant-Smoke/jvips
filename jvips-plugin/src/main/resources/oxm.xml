@@ -1,0 +1,13 @@
+<!--<?xml version="1.0"?>-->
+<!--<xml-bindings-->
+<!--        xmlns="http://www.eclipse.org/eclipselink/xsds/persistence/oxm"-->
+<!--        package-name="com.pss.jvips.plugin.model">-->
+<!--    <java-types>-->
+<!--        <java-type name="com.squareup.javapoet.ClassName">-->
+<!--            <xml-type factory-class="com.pss.jvips.plugin.xml.Factory" factory-method="create"/>-->
+<!--        </java-type>-->
+<!--        <java-type name="com.pss.jvips.plugin.naming.JavaCaseFormat">-->
+<!--            <xml-type factory-class="com.pss.jvips.plugin.xml.Factory" factory-method="createName"/>-->
+<!--        </java-type>-->
+<!--    </java-types>-->
+<!--</xml-bindings>-->

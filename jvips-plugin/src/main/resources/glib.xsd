@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" targetNamespace="http://www.gtk.org/introspection/glib/1.0" xmlns:glib="http://www.gtk.org/introspection/glib/1.0" xmlns:c="http://www.gtk.org/introspection/c/1.0" xmlns:core="http://www.gtk.org/introspection/core/1.0">
+    <xs:import namespace="http://www.gtk.org/introspection/c/1.0" schemaLocation="c.xsd"/>
+    <xs:import namespace="http://www.gtk.org/introspection/core/1.0" schemaLocation="Vips-8.0.xsd"/>
+    <xs:import namespace="http://www.w3.org/XML/1998/namespace" schemaLocation="xml.xsd"/>
+    <xs:attribute name="get-type" type="xs:NCName"/>
+    <xs:attribute name="type-name" type="xs:NCName"/>
+    <xs:attribute name="type-struct" type="xs:NCName"/>
+    <xs:element name="signal">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element minOccurs="0" ref="core:doc"/>
+                <xs:element ref="core:return-value"/>
+                <xs:element minOccurs="0" ref="core:parameters"/>
+            </xs:sequence>
+            <xs:attribute name="action" type="xs:integer"/>
+            <xs:attribute name="name" use="required" type="xs:NCName"/>
+            <xs:attribute name="when" use="required" type="xs:NCName"/>
+        </xs:complexType>
+    </xs:element>
+    <xs:attribute name="is-gtype-struct-for" type="xs:NCName"/>
+    <xs:element name="boxed">
+        <xs:complexType>
+            <xs:attribute ref="c:symbol-prefix" use="required"/>
+            <xs:attribute ref="glib:get-type" use="required"/>
+            <xs:attribute ref="glib:name" use="required"/>
+            <xs:attribute ref="glib:type-name" use="required"/>
+        </xs:complexType>
+    </xs:element>
+    <xs:attribute name="get-property" type="xs:NCName"/>
+    <xs:attribute name="set-property" type="xs:NCName"/>
+    <xs:attribute name="name" type="xs:NCName"/>
+    <xs:attribute name="nick" type="xs:NCName"/>
+</xs:schema>

@@ -1,0 +1,213 @@
+= Prototype Stage
+
+== Todo
+- Handle unlisted enums in foreign.h
+- Handle Unlisted params in Heif
+- Handle options in init.c
+
+
+
+== Usage
+
+[source,Java]
+----
+public class SharedReference<T, R extends Addressable<T>> {
+
+    private static final AtomicIntegerFieldUpdater<SharedImage> updater = newUpdater(SharedReference.class, "threadCount");
+
+    private final long id;
+
+    private volatile int threadCount = 1; <1>
+
+    private volatile R referent; <2>
+
+    private final StampedLock lock = new StampedLock(); <3>
+
+    private final T address; <4>
+}
+----
+<1> The number of threads holding onto this shared image, this field is updated atomicly
+<2> The underlying image, this will be nulled if the thread count goes to zero
+<3> The stamped lock shared among threads
+<4> Either the `MemorySegment`, `ByteBuffer` or `Long` address depending on the implementation
+
+[source,java]
+----
+class VipsImageDelegate<T> implements JVipsImage<T> {
+
+    protected final long id;
+
+    protected final SharedReference<T, JVipsImage<T>> sharedImage; // <1>
+    protected final Thread thread; // <2>
+
+    @Override
+    public int getXSize() {
+        ensureOperation(); <3>
+        StampedLock lock = sharedImage.getLock(); <4>
+        long id = lock.tryReadLock();
+        try {
+            if(id != 0) {
+                return getSharedImage().getXSize(); <5>
+            } else {
+                throw new RuntimeException("Failed to get read lock for image");
+            }
+        } finally {
+            lock.unlockRead(id);
+        }
+    }
+
+    void ensureOperation(){
+        if(this.sharedImage.getImage() == null || this.sharedImage.getThreadCount() == 0){
+            throw new RuntimeException("Image was GC'ed");
+        }
+        if(this.thread != Thread.currentThread()){
+            throw new RuntimeException("Thread does not hold image");
+        }
+    }
+}
+----
+<1> Globally shared image
+<2> The owning thread
+<3> Ensure the calling thread is the owning thread, also make sure the unerlying image is not
+null or the thread count is 0
+<4> Get the shared StampedLock
+<5> This could throw a null pointer exception if a something wierd happens
+
+
+[source,Java]
+----
+public class MyImageManipulator {
+    void doSomethingWithAnImage(String file){
+        try(VipsContext context = JniContext.create()){ <1>
+            JVipsImage<Long> img = context.loadImage(file);
+            Executors.newSingleThreadPool().submit(()-> {
+                context.saveAvif(img); <2>
+            });
+        } catch(VipsException e){
+            throw new RuntimeException(e);
+        }
+    }
+}
+----
+<1> Open an image context
+<2> This will throw an error
+
+[source,Java]
+----
+public class MyImageManipulator {
+
+    JVipsExecutorService executor = JVipsExecutorService.ofDefault(); // <1>
+
+    void doSomethingWithAnImage(String file){
+        try(VipsContext context = JniContext.create()){ <2>
+            JVipsImage<Long> img = context.loadImage(file);
+            executor.submit(()-> {
+                JVipsImage<Long> imgref = context.transfer(Thread.currentThread(), img); <3>
+                context.saveAvif(imgref);
+            }); <4>
+
+        } catch(VipsException e){
+            throw new RuntimeException(e);
+        }
+    }
+}
+----
+<1> All sub operations that happen in another thread must use the `JVipsExecutorService` the overridden life cycle
+methods will properly unref the image
+<2> Create the context
+<3> Create a new refrence in the underlying `SharedImage`
+<4> After it has run the `ThreadPoolExecutor#afterExecute(...)` is invoked and the ref counts are de-incremented
+
+
+
+
+== Code Generation
+
+A lot of code is generated, the `buildSrc` directory which is a Gradle convention allows writing a plugin with out
+creating a separate project
+
+.Stages
+- Read the GObject Introspection
+- Register All Types
+- Register all Executable's with the associated type
+- Parse the Documentation
+* Early Stage Parsing handles Optional Params (more on this)
+* Parse the documentation update to JavaDoc format with AsciiDoc syntax
+- Method names are:
+* Transformed to camelCase, some are elongated ie: `getXres` becomes `getXResolution`
+* Splitting on certain keywords so `jpegsave_buffer` and `jpegsave_file` become `jpegSaveBuffer` and
+`jpegSaveFile`
+* Take advantage of method overloading, so `xyz` and `xyz1` both become `xyz`
+- Each method that has optional parameters has it add to it's method signature as an `@OptionalParam` with an overloaded method that just
+passes `null`
+- Each method that has 1 optional parameter has it add to it's method signature as a boxed primitive `@OptionalParam(name = "opt")`
+- Methods with more than 1 optional parameter go through a process where each one that has the same parameter names are grouped together and a method dto is created, ending with `Params` all the parameters are boxed primitives or
+any reference type
+- So optional params don't always specify their type, so at first the parser was going to look
+keywords like `defaults to` and such. Instead:
+* We look at each source file
+* Look for a block like this:
+[source,C]
+----
+    vobject_class->nickname = "thumbnail_base";
+	vobject_class->description = _( "thumbnail generation" );
+	vobject_class->build = vips_thumbnail_build;
+----
+
+* Parse the macros that may look like this:
+[source, C]
+----
+VIPS_ARG_IMAGE( class, "out", 2,
+		_( "Output" ),
+		_( "Output image" ),
+		VIPS_ARGUMENT_REQUIRED_OUTPUT,
+		G_STRUCT_OFFSET( VipsThumbnail, out ) );
+----
+* The `..._base"` lets us know to add it to other  blocks found in the same file
+
+== Objectives
+* 3 Implementations in order of importance
+- Unsafe
+- DirectByteBuffers <- Java 8 I think has problems with GC'ing DBB and OOM errors because the GC doesn't track with the native heap.
+- Panama
+* Quickly get running with Protobuf to provide arguments
+* Eventually switch to using native methods with typed arguments
+
+
+== Resources
+
+Chronicle Bytes and Agrona are included in the dependencies for reference.
+
+https://stackoverflow.com/questions/39381339/understanding-safe-access-of-jni-arguments
+
+https://www.ibm.com/docs/en/sdk-java-technology/8?topic=jni-copying-pinning
+
+https://vanilla-java.github.io/2018/09/04/Some-Java-oddities.html
+
+https://newrelic.com/resources/report/2022-state-of-java-ecosystem
+
+http://normanmaurer.me/blog/2014/01/07/JNI-Performance-Welcome-to-the-dark-side/
+
+https://stackoverflow.com/questions/40122063/how-java-gc-does-direct-byte-buffer-clean-up-because-ibm-docs-says-it-does
+
+https://stackoverflow.com/questions/1854398/how-to-garbage-collect-a-direct-buffer-in-java
+
+https://stackoverflow.com/questions/49959378/releasing-a-direct-buffer-in-java-and-possible-pitfalls
+
+https://stackoverflow.com/questions/35363486/jni-direct-buffers-who-is-responsible-for-native-buffer-freeing
+
+https://gist.github.com/Nimrodda/f027c8daebe4e3f44fe8
+
+https://cr.openjdk.java.net/~mcimadamore/panama/varargs.html
+
+Strings:
+
+http://www.club.cc.cmu.edu/~cmccabe/blog_jni_flaws.html
+https://stackoverflow.com/questions/16694239/java-native-code-string-ending
+
+It looks like the JDK team is also doing similar with threads with Panama to prevent resource leaks
+https://minborgsjavapot.blogspot.com/2022/12/java-20-sneak-peek-on-panama-ffm-api.html
+
+SilkDI:
+
+https://itnext.io/git-submodule-update-30ef27ea1f79

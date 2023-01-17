@@ -1,0 +1,51 @@
+# This workflow builds a modular Java project with Bach.java
+# For more information see:
+# - https://help.github.com/en/actions/language-and-framework-guides/github-actions-for-java
+# - https://github.com/sormuras/bach
+
+name: 'CI'
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+env:
+  PROJECT_VERSION: '11-ea'
+
+jobs:
+  build:
+    name: "Build (JDK-${{ matrix.java }}, ${{ matrix.os }})"
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest ]
+        java: [ 17 ]
+        language: [ 'java' ]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: 'Check out sources'
+        uses: actions/checkout@v3
+      - name: 'Set up JDK'
+        uses: oracle-actions/setup-java@v1
+        with:
+          release: ${{ matrix.java }}
+      - name: 'Set up version'
+        run: |
+          SHA7=$(echo "${{ github.sha }}" | cut -c1-7)
+          VERSION=${PROJECT_VERSION}+${SHA7}
+          echo "VERSION=${VERSION}" >> ${GITHUB_ENV}
+      - name: 'Build with Bach'
+        run: .bach/bin/bach --project-version 11-ea-${VERSION} build
+      - name: 'Report test summary'
+        if: always()
+        uses: test-summary/action@v2
+        with:
+          paths: .bach/out/test-reports/**/TEST-*.xml
+      - name: 'Upload build artifact'
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ github.event.repository.name }}-build-${{ env.VERSION }}
+          path: |
+            .bach/out/main/modules

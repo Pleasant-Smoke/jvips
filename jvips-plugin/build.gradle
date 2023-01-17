@@ -1,0 +1,125 @@
+plugins {
+    id 'groovy'
+    id 'idea'
+    id 'java-gradle-plugin'
+    id 'antlr'
+}
+
+/**
+ * Gradle Test Problems fix:
+ * https://youtrack.jetbrains.com/issue/IDEA-293320/Test-events-were-not-received-when-running-JUnit-5-tests-in-included-build-using-Gradle-composite-build-feature#focus=Comments-27-6051292.0-0
+ */
+
+group 'com.pss'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+sourceSets {
+    main {
+        java {
+
+            srcDirs += "${projectDir}/src/main/generated"
+            srcDirs += "${projectDir}/src/main/purejin"
+            srcDirs += "${projectDir}/src/main/poet"
+            srcDirs += "${buildDir}/generated/sources/annotationProcessor/java/main"
+        }
+    }
+    test {
+        java {
+            srcDirs += "${projectDir}/src/test/poet"
+        }
+    }
+}
+
+
+
+dependencies {
+
+
+   // implementation fileTree('lib/purejin/.bach/out/main/modules'){include '*.jar'}
+
+    implementation group: 'org.semver4j', name: 'semver4j', version: '4.1.1'
+
+    runtimeOnly(gradleApi())
+    gradleApi()
+    implementation group: 'org.immutables', name: 'value', version: '2.9.2'
+    annotationProcessor group: 'org.immutables', name: 'value', version: '2.9.2'
+    implementation group: 'org.jetbrains', name: 'annotations', version: '23.0.0'
+    implementation group: 'com.google.guava', name: 'guava', version: '31.1-jre'
+
+    implementation 'org.mapstruct:mapstruct:1.5.3.Final'
+    annotationProcessor 'org.mapstruct:mapstruct-processor:1.5.3.Final'
+
+    implementation group: 'org.antlr', name: 'antlr4', version: '4.11.1'
+    antlr group: 'org.antlr', name: 'antlr4', version: '4.11.1'
+
+    implementation group: 'org.checkerframework', name: 'checker-qual', version: '3.27.0'
+    implementation group: 'com.github.spotbugs', name: 'spotbugs-annotations', version: '4.7.3'
+    implementation group: 'org.apache.commons', name: 'commons-text', version: '1.10.0'
+    implementation group: 'commons-io', name: 'commons-io', version: '2.11.0'
+    implementation group: 'org.jodd', name: 'jodd-core', version: '5.3.0'
+    implementation group: 'org.jodd', name: 'jodd-util', version: '6.2.0'
+
+
+    implementation group: 'org.eclipse.persistence', name: 'org.eclipse.persistence.moxy', version: '4.0.0'
+    implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.12.0'
+    implementation group: 'org.apache.commons', name: 'commons-collections4', version: '4.4'
+
+  //  implementation group: 'com.squareup', name: 'javapoet', version: '1.13.0'
+   // implementation group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-xml', version: '2.14.0'
+    implementation group: 'jakarta.xml.bind', name: 'jakarta.xml.bind-api', version: '4.0.0'
+   // implementation group: 'org.apache.groovy', name: 'groovy', version: '4.0.6'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.1'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.1'
+    testImplementation group: 'org.assertj', name: 'assertj-core', version: '3.23.1'
+    testImplementation group: 'org.spockframework', name: 'spock-core', version: '2.3-groovy-3.0'
+    testImplementation group: 'com.google.testing.compile', name: 'compile-testing', version: '0.21.0'
+    testImplementation group: 'org.mockito', name: 'mockito-core', version: '4.11.0'
+    testImplementation group: 'com.google.jimfs', name: 'jimfs', version: '1.2'
+    testImplementation group: 'org.eclipse.jdt', name: 'ecj', version: '3.32.0'
+    testCompileOnly 'junit:junit:4.12'
+    testRuntimeOnly 'org.junit.vintage:junit-vintage-engine:5.1.0'
+
+
+}
+
+gradlePlugin {
+    plugins {
+        vipsSources {
+            id = 'com.pss.jvips.plugin'
+            implementationClass = 'com.pss.jvips.plugin.GenerateVipsSource'
+        }
+    }
+}
+
+test {
+    useJUnitPlatform()
+    jvmArgs += ['--add-exports', 'java.base/sun.nio.ch=ALL-UNNAMED','--add-exports', 'jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED' ,'--add-opens', 'java.base/sun.nio.ch=ALL-UNNAMED', '--add-opens','jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED']
+}
+generateGrammarSource {
+    arguments += ['-visitor']
+    outputDirectory =  file("${projectDir}/src/main/generated/com/pss/jvips/plugin/antlr")
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs +=['--add-exports' , 'jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED']
+}
+
+tasks.register("copyPureJin", Copy) {
+    doLast {
+
+        from("${projectDir}/lib/purejin"){
+            include "se.jbee.**/main/java/**"
+            exclude("**/module-info.java")
+        }
+        eachFile { FileCopyDetails fcd ->
+
+            def join = fcd.relativePath.segments.toList().subList(3, fcd.relativePath.segments.length).join("/")
+            fcd.setPath(join)
+        }
+        into "${projectDir}/src/main/purejin"
+        includeEmptyDirs = false
+    }
+}
