@@ -1,19 +1,24 @@
 = Prototype Stage
 
+== Code Breakage
+The current repository code will not generate the correct source files as they are in the process of being changed from
+using static and singletons to dependency injection that "looks behind" to check for any breaking api changes.
+
 == Todo
 - Handle unlisted enums in foreign.h
 - Handle Unlisted params in Heif
 - Handle options in init.c
-
+- When the JDK 20 reaches GA, update Panama for version 20
 
 
 == Usage
 
+.The underlying ref-counted resource
 [source,Java]
 ----
 public class SharedReference<T, R extends Addressable<T>> {
 
-    private static final AtomicIntegerFieldUpdater<SharedImage> updater = newUpdater(SharedReference.class, "threadCount");
+    private static final AtomicIntegerFieldUpdater<SharedReference> updater = newUpdater(SharedReference.class, "threadCount");
 
     private final long id;
 
@@ -31,6 +36,7 @@ public class SharedReference<T, R extends Addressable<T>> {
 <3> The stamped lock shared among threads
 <4> Either the `MemorySegment`, `ByteBuffer` or `Long` address depending on the implementation
 
+.Delegation of the `SharedResource`, this is to prevent end-users from holding on to references that have been free'd
 [source,java]
 ----
 class VipsImageDelegate<T> implements JVipsImage<T> {
@@ -73,7 +79,7 @@ null or the thread count is 0
 <4> Get the shared StampedLock
 <5> This could throw a null pointer exception if a something wierd happens
 
-
+.Example of an error, not working within the confines of JVips
 [source,Java]
 ----
 public class MyImageManipulator {
@@ -92,11 +98,12 @@ public class MyImageManipulator {
 <1> Open an image context
 <2> This will throw an error
 
+.How to use another thread
 [source,Java]
 ----
 public class MyImageManipulator {
 
-    JVipsExecutorService executor = JVipsExecutorService.ofDefault(); // <1>
+    JVipsExecutorService executor = JVipsExecutorService.ofDefault();  <1>
 
     void doSomethingWithAnImage(String file){
         try(VipsContext context = JniContext.create()){ <2>
@@ -123,11 +130,11 @@ methods will properly unref the image
 
 == Code Generation
 
-A lot of code is generated, the `buildSrc` directory which is a Gradle convention allows writing a plugin with out
-creating a separate project
+A lot of code is generated, the `jvips-plugin` directory which is a seperate project under a Gradle composite build
 
 .Stages
 - Read the GObject Introspection
+- Read the associated C source files
 - Register All Types
 - Register all Executable's with the associated type
 - Parse the Documentation
@@ -143,10 +150,10 @@ passes `null`
 - Each method that has 1 optional parameter has it add to it's method signature as a boxed primitive `@OptionalParam(name = "opt")`
 - Methods with more than 1 optional parameter go through a process where each one that has the same parameter names are grouped together and a method dto is created, ending with `Params` all the parameters are boxed primitives or
 any reference type
-- So optional params don't always specify their type, so at first the parser was going to look
-keywords like `defaults to` and such. Instead:
-* We look at each source file
-* Look for a block like this:
+
+== Source Parsing
+- We look at each source file
+- Look for a block like this:
 [source,C]
 ----
     vobject_class->nickname = "thumbnail_base";
@@ -163,20 +170,14 @@ VIPS_ARG_IMAGE( class, "out", 2,
 		VIPS_ARGUMENT_REQUIRED_OUTPUT,
 		G_STRUCT_OFFSET( VipsThumbnail, out ) );
 ----
-* The `..._base"` lets us know to add it to other  blocks found in the same file
+* The `..._base"` lets us know to add it to other  blocks found in the same file, there are some corner cases
 
 == Objectives
-* 3 Implementations in order of importance
-- Unsafe
-- DirectByteBuffers <- Java 8 I think has problems with GC'ing DBB and OOM errors because the GC doesn't track with the native heap.
+* Create 2 Implementations
+- DirectByteBuffers using JNI
 - Panama
-* Quickly get running with Protobuf to provide arguments
-* Eventually switch to using native methods with typed arguments
-
 
 == Resources
-
-Chronicle Bytes and Agrona are included in the dependencies for reference.
 
 https://stackoverflow.com/questions/39381339/understanding-safe-access-of-jni-arguments
 
